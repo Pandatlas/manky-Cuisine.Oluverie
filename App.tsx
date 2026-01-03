@@ -8,19 +8,26 @@ import { getGlobalSummary } from './services/geminiService';
 
 const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<string>('Tous les pays');
   const [selectedOil, setSelectedOil] = useState<OilProduct | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryData, setSummaryData] = useState<any>(null);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
 
+  const countries = useMemo(() => {
+    const list = OIL_DATA.map(oil => oil.origin);
+    return ['Tous les pays', ...Array.from(new Set(list))];
+  }, []);
+
   const filteredOils = useMemo(() => {
     return OIL_DATA.filter(oil => {
       const matchesSearch = oil.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            oil.producer.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesSearch;
+      const matchesCountry = selectedCountry === 'Tous les pays' || oil.origin === selectedCountry;
+      return matchesSearch && matchesCountry;
     }).sort((a, b) => a.rank - b.rank);
-  }, [searchTerm]);
+  }, [searchTerm, selectedCountry]);
 
   const handleRowClick = (oil: OilProduct) => {
     if (loadingId) return;
@@ -86,41 +93,71 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Recherche & Filtre */}
+      {/* Recherche & Filtre Pays */}
       <section className="max-w-7xl mx-auto -mt-12 relative z-20 px-4 md:px-0">
-        <div className="bg-white/70 backdrop-blur-3xl shadow-2xl rounded-3xl p-6 md:p-8 flex flex-col md:flex-row gap-6 border border-white/40">
-          <div className="flex-1 relative">
-            <svg className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-800/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            <input 
-              type="text" 
-              placeholder="Rechercher un terroir, une huile, un producteur..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-16 pr-8 py-4 border border-slate-100 rounded-2xl focus:ring-1 focus:ring-emerald-500 outline-none transition bg-white/50 text-emerald-950 font-medium placeholder:text-slate-300"
-            />
+        <div className="bg-white/70 backdrop-blur-3xl shadow-2xl rounded-3xl p-6 md:p-8 border border-white/40 space-y-6">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex-1 relative">
+              <svg className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-800/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <input 
+                type="text" 
+                placeholder="Rechercher un terroir, une huile, un producteur..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-16 pr-8 py-4 border border-slate-100 rounded-2xl focus:ring-1 focus:ring-emerald-500 outline-none transition bg-white/50 text-emerald-950 font-medium placeholder:text-slate-300"
+              />
+            </div>
+            <div className="w-full md:w-64">
+              <select 
+                value={selectedCountry}
+                onChange={(e) => setSelectedCountry(e.target.value)}
+                className="w-full py-4 px-6 border border-slate-100 rounded-2xl focus:ring-1 focus:ring-emerald-500 outline-none transition bg-white/50 text-emerald-950 font-bold text-[10px] uppercase tracking-widest appearance-none cursor-pointer"
+              >
+                {countries.map(country => (
+                  <option key={country} value={country}>{country.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <button className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[10px] uppercase tracking-widest px-10 py-4 rounded-2xl transition-all shadow-lg shadow-amber-500/20">
-            Filtrer les Terroirs
-          </button>
+
+          {/* Filtres Rapides (Boutons Pays) */}
+          <div className="flex flex-wrap gap-2 pt-2">
+            {countries.map(country => (
+              <button
+                key={country}
+                onClick={() => setSelectedCountry(country)}
+                className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${
+                  selectedCountry === country 
+                  ? 'bg-emerald-950 text-white shadow-lg' 
+                  : 'bg-white text-slate-400 hover:text-emerald-800 border border-slate-100'
+                }`}
+              >
+                {country}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Table du Palmarès */}
       <main className="max-w-7xl mx-auto px-6 py-20 mb-32">
         <div className="flex justify-between items-end mb-12">
-           <h3 className="text-3xl font-black text-emerald-950 serif italic">Classement Officiel</h3>
+           <div>
+             <h3 className="text-3xl font-black text-emerald-950 serif italic">Classement Officiel</h3>
+             <p className="text-slate-400 text-xs font-medium mt-1">Filtré par : <span className="text-emerald-800 font-bold">{selectedCountry}</span></p>
+           </div>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Indexé par le Conseil Oléicole International</p>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {filteredOils.map((oil) => (
+          {filteredOils.length > 0 ? filteredOils.map((oil) => (
             <div 
               key={oil.id} 
               className={`group bg-white rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 cursor-pointer border border-slate-100 hover:shadow-2xl hover:shadow-emerald-900/5 hover:-translate-y-1 transition-all duration-500 ${loadingId === oil.id ? 'bg-emerald-50 ring-2 ring-emerald-500/20' : ''}`}
               onClick={() => handleRowClick(oil)}
             >
               <div className="flex items-center gap-8 w-full md:w-auto">
-                <span className={`text-4xl font-black italic serif ${oil.rank <= 2 ? 'text-emerald-800' : 'text-slate-200'}`}>
+                <span className={`text-4xl font-black italic serif ${oil.rank <= 3 ? 'text-emerald-800' : 'text-slate-200'}`}>
                   0{oil.rank}
                 </span>
                 <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-inner bg-slate-100">
@@ -141,7 +178,7 @@ const App: React.FC = () => {
                 </div>
                 <div className="h-10 w-px bg-slate-100"></div>
                 <div className="text-center min-w-[120px]">
-                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${oil.rank === 1 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${oil.rank <= 3 ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
                       {oil.medal}
                    </span>
                 </div>
@@ -157,7 +194,12 @@ const App: React.FC = () => {
                 )}
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+               <p className="text-slate-400 font-medium serif italic text-xl">Aucune huile trouvée pour cette sélection.</p>
+               <button onClick={() => { setSearchTerm(''); setSelectedCountry('Tous les pays'); }} className="mt-4 text-emerald-700 font-bold text-xs uppercase tracking-widest border-b border-emerald-700 pb-1">Réinitialiser les filtres</button>
+            </div>
+          )}
         </div>
       </main>
 
@@ -199,7 +241,7 @@ const App: React.FC = () => {
 
       <footer className="bg-[#0a1e16] text-emerald-100 py-20 px-6 border-t border-emerald-900/50">
         <div className="max-w-7xl mx-auto text-center">
-           <h1 className="text-2xl font-black text-white tracking-tighter mb-8">OILRANK <span className="text-amber-500">GASTRONOMY</span></h1>
+           <h1 className="text-2xl font-black text-white tracking-tighter mb-8">OILRANK <span className="text-amber-500">GASTRONOMIE</span></h1>
            <div className="flex flex-wrap justify-center gap-10 text-[10px] font-black uppercase tracking-[0.3em] mb-12 opacity-40">
               <a href="#" className="hover:text-amber-500 transition">Confidentialité</a>
               <a href="#" className="hover:text-amber-500 transition">Méthodologie de Notation</a>
