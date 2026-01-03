@@ -1,0 +1,7 @@
+{
+  "name": "OilRank - World Oil Ranking",
+  "description": "A premium platform for ranking and exploring the world's finest vegetable and seed oils, featuring AI-powered sommelier analysis and interactive data visualization.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
